@@ -35,7 +35,12 @@ def _parsear_param(param: str) -> tuple:
     if '=' not in param:
         raise ValueError(f"Parâmetro inválido: '{param}'. Use o formato chave=valor")
     chave, valor = param.split('=', 1)
-    return chave.strip(), float(valor.strip())
+    try:
+        return chave.strip(), float(valor.strip())
+    except ValueError:
+        raise ValueError(
+            f"Valor inválido para '{chave.strip()}': '{valor.strip()}' não é um número"
+        )
 
 
 def _processar_linha_ohm(params: List[str]) -> str:
@@ -119,32 +124,38 @@ def processar_csv(caminho_entrada: str, caminho_saida: str = "") -> str:
     total = 0
     erros = 0
     
-    with open(caminho_entrada, 'r', encoding='utf-8') as arquivo:
-        leitor = csv.reader(arquivo)
-        
-        for num_linha, linha in enumerate(leitor, 1):
-            # Pula linhas vazias e cabeçalho
-            if not linha or linha[0].strip().startswith('#') or linha[0].strip() == 'comando':
-                continue
-            
-            total += 1
-            comando = linha[0].strip().lower()
-            params = linha[1:] if len(linha) > 1 else []
-            
-            try:
-                if comando not in processadores:
-                    raise ValueError(f"Comando desconhecido: '{comando}'")
-                
-                resultado = processadores[comando](params)
-                linhas_resultado.append(f"\n  [{num_linha}] {comando.upper()}")
-                linhas_resultado.append(f"      Entrada: {', '.join(p for p in params if p.strip())}")
-                linhas_resultado.append(f"      Resultado: {resultado}")
-                
-            except Exception as e:
-                erros += 1
-                linhas_resultado.append(f"\n  [{num_linha}] {comando.upper()} ❌ ERRO")
-                linhas_resultado.append(f"      Entrada: {', '.join(p for p in params if p.strip())}")
-                linhas_resultado.append(f"      Erro: {e}")
+    try:
+        with open(caminho_entrada, 'r', encoding='utf-8') as arquivo_csv:
+            leitor = csv.reader(arquivo_csv)
+
+            for num_linha, linha in enumerate(leitor, 1):
+                # Pula linhas vazias e cabeçalho
+                if not linha or linha[0].strip().startswith('#') or linha[0].strip() == 'comando':
+                    continue
+
+                total += 1
+                comando = linha[0].strip().lower()
+                params = linha[1:] if len(linha) > 1 else []
+
+                try:
+                    if comando not in processadores:
+                        raise ValueError(f"Comando desconhecido: '{comando}'")
+
+                    resultado = processadores[comando](params)
+                    linhas_resultado.append(f"\n  [{num_linha}] {comando.upper()}")
+                    linhas_resultado.append(f"      Entrada: {', '.join(p for p in params if p.strip())}")
+                    linhas_resultado.append(f"      Resultado: {resultado}")
+
+                except Exception as e:
+                    erros += 1
+                    linhas_resultado.append(f"\n  [{num_linha}] {comando.upper()} ❌ ERRO")
+                    linhas_resultado.append(f"      Entrada: {', '.join(p for p in params if p.strip())}")
+                    linhas_resultado.append(f"      Erro: {e}")
+
+    except UnicodeDecodeError:
+        raise ValueError(
+            f"O arquivo '{caminho_entrada}' não está em UTF-8. Salve-o como UTF-8 e tente novamente."
+        )
     
     linhas_resultado.append("\n" + "=" * 60)
     linhas_resultado.append(f"  Total: {total} cálculos | Sucesso: {total - erros} | Erros: {erros}")
@@ -154,7 +165,10 @@ def processar_csv(caminho_entrada: str, caminho_saida: str = "") -> str:
     
     # Salva o relatório se um caminho de saída foi informado
     if caminho_saida:
-        with open(caminho_saida, 'w', encoding='utf-8') as arquivo_saida:
-            arquivo_saida.write(relatorio)
+        try:
+            with open(caminho_saida, 'w', encoding='utf-8') as arquivo_saida:
+                arquivo_saida.write(relatorio)
+        except PermissionError:
+            raise PermissionError(f"Sem permissão para gravar em '{caminho_saida}'. Verifique o caminho e as permissões.")
     
     return relatorio
