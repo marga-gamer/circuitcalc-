@@ -21,14 +21,15 @@ def calcular_divisor_tensao(vin: float, r1: float, r2: float) -> dict:
     """
     if vin < 0 or r1 < 0 or r2 < 0:
         raise ValueError("Todos os valores devem ser positivos")
-    
-    if r1 == 0 and r2 == 0:
-        raise ValueError("Pelo menos uma resistência deve ser maior que zero")
-    
+
     if vin == 0:
-        raise ValueError("A tensão deve ser maior que zero")
-    
-    razao = r2 / (r1 + r2) if (r1 + r2) > 0 else 0
+        raise ValueError("Vin deve ser maior que zero")
+    if r1 == 0:
+        raise ValueError("R1 deve ser maior que zero")
+    if r2 == 0:
+        raise ValueError("R2 deve ser maior que zero")
+
+    razao = r2 / (r1 + r2)
     v2 = vin * razao
     v1 = vin - v2
     
