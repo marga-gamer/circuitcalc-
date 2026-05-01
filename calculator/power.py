@@ -22,12 +22,11 @@ def calcular_potencia(v: float = 0, i: float = 0, r: float = 0) -> dict:
     """
     if v < 0 or i < 0 or r < 0:
         raise ValueError("Todos os valores devem ser positivos")
-    
+
     # Calcula a potência com os dados disponíveis
     if v > 0 and i > 0:
         potencia = v * i
-        if r == 0:
-            r = v / i
+        r = v / i if r == 0 else r
     elif v > 0 and r > 0:
         potencia = (v ** 2) / r
         i = v / r
