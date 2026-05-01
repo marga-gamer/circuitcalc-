@@ -6,7 +6,7 @@ Ferramenta de linha de comando em Python para cálculos essenciais de engenharia
 
 1. Clone o repositório:
 ```bash
-git clone <seu-repositorio>
+git clone https://github.com/Henrique-Margarido/circuitcalc-
 cd circuitcalc
 ```
 
