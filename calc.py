@@ -14,6 +14,7 @@ Uso:
 """
 
 import argparse
+import math
 import sys
 
 from calculator.ohm import calcular_ohm
@@ -23,6 +24,34 @@ from calculator.color_code import decodificar_resistor_4_faixas
 from calculator.power import calcular_potencia, verificar_limite_potencia
 from calculator.history import registrar_calculo, listar_historico, limpar_historico
 from calculator.batch import processar_csv
+
+
+def _numero(valor: str) -> float:
+    """Tipo customizado para argparse: converte string em float com mensagem de erro amigável."""
+    try:
+        resultado = float(valor)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"'{valor}' não é um número válido. Use apenas dígitos (ex: 12, 0.5, 1e-6)"
+        )
+    if math.isnan(resultado) or math.isinf(resultado):
+        raise argparse.ArgumentTypeError(
+            f"'{valor}' não é um número válido"
+        )
+    return resultado
+
+
+def _inteiro_positivo(valor: str) -> int:
+    """Tipo customizado para argparse: converte string em int positivo com mensagem amigável."""
+    try:
+        n = int(valor)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"'{valor}' não é um número inteiro válido"
+        )
+    if n <= 0:
+        raise argparse.ArgumentTypeError("O número de registros deve ser maior que zero")
+    return n
 
 
 def cmd_ohm(args) -> None:
@@ -186,6 +215,11 @@ def cmd_history(args) -> None:
 
 def main():
     """Função principal da CLI."""
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
     parser = argparse.ArgumentParser(
         description='CircuitCalc - Calculadora de engenharia elétrica',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -208,23 +242,23 @@ Exemplos de uso:
     
     # Comando: ohm
     parser_ohm = subparsers.add_parser('ohm', help='Lei de Ohm (V=I×R)')
-    parser_ohm.add_argument('--v', type=float, help='Tensão em Volts')
-    parser_ohm.add_argument('--i', type=float, help='Corrente em Amperes')
-    parser_ohm.add_argument('--r', type=float, help='Resistência em Ohms')
+    parser_ohm.add_argument('--v', type=_numero, help='Tensão em Volts')
+    parser_ohm.add_argument('--i', type=_numero, help='Corrente em Amperes')
+    parser_ohm.add_argument('--r', type=_numero, help='Resistência em Ohms')
     parser_ohm.set_defaults(func=cmd_ohm)
     
     # Comando: divider
     parser_divider = subparsers.add_parser('divider', help='Divisor de tensão')
-    parser_divider.add_argument('--vin', type=float, required=True, help='Tensão de entrada em Volts')
-    parser_divider.add_argument('--r1', type=float, required=True, help='Resistência R1 em Ohms')
-    parser_divider.add_argument('--r2', type=float, required=True, help='Resistência R2 em Ohms')
+    parser_divider.add_argument('--vin', type=_numero, required=True, help='Tensão de entrada em Volts')
+    parser_divider.add_argument('--r1', type=_numero, required=True, help='Resistência R1 em Ohms')
+    parser_divider.add_argument('--r2', type=_numero, required=True, help='Resistência R2 em Ohms')
     parser_divider.set_defaults(func=cmd_divider)
     
     # Comando: rc
     parser_rc = subparsers.add_parser('rc', help='Circuito RC')
-    parser_rc.add_argument('--r', type=float, required=True, help='Resistência em Ohms')
-    parser_rc.add_argument('--c', type=float, required=True, help='Capacitância em Farads')
-    parser_rc.add_argument('--t', type=float, required=True, help='Tempo em segundos')
+    parser_rc.add_argument('--r', type=_numero, required=True, help='Resistência em Ohms')
+    parser_rc.add_argument('--c', type=_numero, required=True, help='Capacitância em Farads')
+    parser_rc.add_argument('--t', type=_numero, required=True, help='Tempo em segundos')
     parser_rc.set_defaults(func=cmd_rc)
     
     # Comando: color
@@ -235,10 +269,10 @@ Exemplos de uso:
     
     # Comando: power (EXTRA)
     parser_power = subparsers.add_parser('power', help='Potência dissipada no resistor')
-    parser_power.add_argument('--v', type=float, help='Tensão em Volts')
-    parser_power.add_argument('--i', type=float, help='Corrente em Amperes')
-    parser_power.add_argument('--r', type=float, help='Resistência em Ohms')
-    parser_power.add_argument('--limit', type=float, default=0.25, 
+    parser_power.add_argument('--v', type=_numero, help='Tensão em Volts')
+    parser_power.add_argument('--i', type=_numero, help='Corrente em Amperes')
+    parser_power.add_argument('--r', type=_numero, help='Resistência em Ohms')
+    parser_power.add_argument('--limit', type=_numero, default=0.25, 
                              help='Limite de potência em Watts (padrão: 0.25)')
     parser_power.set_defaults(func=cmd_power)
     
@@ -250,7 +284,7 @@ Exemplos de uso:
     
     # Comando: history (EXTRA)
     parser_history = subparsers.add_parser('history', help='Histórico de cálculos')
-    parser_history.add_argument('--n', type=int, default=10, help='Número de registros a exibir')
+    parser_history.add_argument('--n', type=_inteiro_positivo, default=10, help='Número de registros a exibir')
     parser_history.add_argument('--clear', action='store_true', help='Limpar o histórico')
     parser_history.set_defaults(func=cmd_history)
     
@@ -268,4 +302,8 @@ Exemplos de uso:
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n❌ Operação cancelada pelo usuário.", file=sys.stderr)
+        sys.exit(1)
