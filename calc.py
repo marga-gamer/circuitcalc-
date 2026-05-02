@@ -213,6 +213,28 @@ def cmd_history(args) -> None:
         print(listar_historico(limite=args.n))
 
 
+_COMANDOS_DISPONIVEIS = 'ohm, divider, rc, color, power, batch, history'
+
+
+class _ArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser com mensagens de erro em português."""
+
+    def error(self, message: str) -> None:
+        if 'invalid choice' in message:
+            inicio = message.find("'") + 1
+            fim = message.find("'", inicio)
+            entrada = message[inicio:fim] if fim > inicio else '?'
+            print(
+                f"❌ Erro: '{entrada}' não é um comando reconhecido.\n"
+                f"   Comandos disponíveis: {_COMANDOS_DISPONIVEIS}\n"
+                f"   Execute sem argumentos para o modo interativo.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"❌ Erro: {message}", file=sys.stderr)
+        sys.exit(2)
+
+
 def main():
     """Função principal da CLI."""
     if hasattr(sys.stdout, 'reconfigure'):
@@ -220,7 +242,7 @@ def main():
     if hasattr(sys.stderr, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-    parser = argparse.ArgumentParser(
+    parser = _ArgumentParser(
         description='CircuitCalc - Calculadora de engenharia elétrica',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
